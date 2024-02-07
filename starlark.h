@@ -94,4 +94,6 @@ int cgoPyDict_Check(PyObject *obj);
 
 int cgoPyList_Check(PyObject *obj);
 
+int cgoPySimpleNamespace_Check(PyObject *obj);
+
 #endif /* PYTHON_STARLARK_GO_H */

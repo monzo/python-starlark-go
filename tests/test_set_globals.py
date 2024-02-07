@@ -1,8 +1,9 @@
 import pytest
+from types import SimpleNamespace
 
 from starlark_go import Starlark
 
-NESTED = [{"one": (1, 1, 1), "two": [2, {"two": 2222.22}]}, ("a", "b", "c")]
+NESTED = [{"one": (1, 1, 1), "two": [2, {"two": 2222.22}]}, ("a", "b", "c"), SimpleNamespace(c=3, d="la reponse d")]
 
 
 def test_set_globals():
@@ -158,10 +159,20 @@ def test_tuple():
     assert s.get("x") == (13, 37)
 
 
+def test_struct():
+    s = Starlark()
+
+    s.set(x=SimpleNamespace(c=3, d="la reponse d"))
+    assert len(s.globals()) == 2
+    assert sorted(s.globals()) == ["struct", "x"]
+    assert isinstance(s.get("x"), SimpleNamespace)
+    assert s.get("x") == SimpleNamespace(c=3, d="la reponse d")
+
+
 def test_nested():
     s = Starlark()
 
     s.set(x=NESTED)
-    assert s.globals() == ["x"]
-    assert len(s.globals()) == 1
+    assert len(s.globals()) == 2
+    assert sorted(s.globals()) == ["struct", "x"]
     assert s.get("x") == NESTED

@@ -226,6 +226,8 @@ PyDoc_STRVAR(
     "<https://pkg.go.dev/go.starlark.net/starlark#Set>`_\n"
     "* Python :py:obj:`python:tuple` to Starlark `tuple "
     "<https://pkg.go.dev/go.starlark.net/starlark#Tuple>`_\n\n"
+    "* Python :py:obj:`python:SimpleNamespace` to Starlark `struct "
+    "<https://pkg.go.dev/go.starlark.net/starlark#Struct>`_\n\n"
     "For the aggregate types (``dict``, ``list``, ``set``, and ``tuple``,) all keys "
     "and/or values must also be one of the supported types.\n\n"
     "Attempting to set a value of any other Python type will raise a "
@@ -526,6 +528,12 @@ int cgoPyList_Check(PyObject *obj)
 {
   /* Necessary because Cgo can't do macros */
   return PyList_Check(obj);
+}
+
+int cgoPySimpleNamespace_Check(PyObject *obj)
+{
+  /* Necessary because Cgo can't do macros */
+  return PyObject_TypeCheck(obj, &_PyNamespace_Type);
 }
 
 /* Helper to fetch exception classes */

@@ -12,6 +12,7 @@ import (
 	"math/big"
 
 	"go.starlark.net/starlark"
+	"go.starlark.net/starlarkstruct"
 )
 
 func pythonToStarlarkTuple(obj *C.PyObject) (starlark.Tuple, error) {
@@ -163,6 +164,60 @@ func pythonToStarlarkSet(obj *C.PyObject) (*starlark.Set, error) {
 	return set, nil
 }
 
+func pythonToStarlarkStruct(obj *C.PyObject) (*starlarkstruct.Struct, error) {
+	tuples := []starlark.Tuple{}
+	// Is there a better way to access attributes without knowing the names?
+	dict := C.PyObject_GenericGetDict(obj, nil)
+	if dict == nil {
+		return &starlarkstruct.Struct{}, fmt.Errorf("Couldn't get generic dict for Python SimpleNamespace")
+	}
+	defer C.Py_DecRef(dict)
+
+	pyiter := C.PyObject_GetIter(dict)
+	if pyiter == nil {
+		return &starlarkstruct.Struct{}, fmt.Errorf("Couldn't get iterator for Python SimpleNamespace internal dict")
+	}
+	defer C.Py_DecRef(pyiter)
+
+	for pykey := C.PyIter_Next(pyiter); pykey != nil; pykey = C.PyIter_Next(pyiter) {
+		var elems []starlark.Value
+		defer C.Py_DecRef(pykey)
+
+		key, err := pythonToStarlarkString(pykey)
+		if err != nil {
+			return &starlarkstruct.Struct{}, fmt.Errorf("While converting key in Python SimpleNamespace: %v", err)
+		}
+
+		pyvalue := C.PyObject_GetItem(dict, pykey)
+		if pyvalue == nil {
+			return &starlarkstruct.Struct{}, fmt.Errorf("Couldn't get value of key %v in Python SimpleNamespace", key)
+		}
+		defer C.Py_DecRef(pyvalue)
+
+		// Add starlark.String key to first element of tuple
+		elems = append(elems, key)
+
+		value, err := innerPythonToStarlarkValue(pyvalue)
+		if err != nil {
+			return &starlarkstruct.Struct{}, fmt.Errorf("While converting value of key %v in Python SimpleNamespace: %v", key, err)
+		}
+
+		// Add value as second element of tuple
+		elems = append(elems, value)
+
+		tuple := starlark.Tuple(elems)
+		tuples = append(tuples, tuple)
+	}
+
+	if C.PyErr_Occurred() != nil {
+		return &starlarkstruct.Struct{}, fmt.Errorf("Python exception while iterating through Python SimpleNamespace")
+	}
+
+	// Build a starlarkstruct.Struct from the tuples
+	strct := starlarkstruct.FromKeywords(starlarkstruct.Default, tuples)
+	return strct, nil
+}
+
 func pythonToStarlarkString(obj *C.PyObject) (starlark.String, error) {
 	var size C.Py_ssize_t
 	cstr := C.PyUnicode_AsUTF8AndSize(obj, &size)
@@ -239,8 +294,8 @@ func innerPythonToStarlarkValue(obj *C.PyObject) (starlark.Value, error) {
 		value, err = pythonToStarlarkTuple(obj)
 	case C.PySequence_Check(obj) == 1:
 		value, err = pythonToStarlarkList(obj)
-	case C.PyMapping_Check(obj) == 1:
-		value, err = pythonToStarlarkDict(obj)
+	case C.cgoPySimpleNamespace_Check(obj) == 1:
+		value, err = pythonToStarlarkStruct(obj)
 	default:
 		err = fmt.Errorf("Don't know how to convert Python %s to Starlark", C.GoString(obj.ob_type.tp_name))
 	}
