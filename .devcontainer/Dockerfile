@@ -13,6 +13,9 @@ FROM ${BASE_IMAGE} AS packages
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+RUN sed -i s/deb.debian.org/archive.debian.org/g /etc/apt/sources.list
+RUN sed -i s/security.debian.org/archive.debian.org/g /etc/apt/sources.list
+RUN sed -i s/stretch-updates/stretch/g /etc/apt/sources.list
 RUN apt-get update && apt-get upgrade -y && \
   apt-get install -y \
   build-essential gdb less libffi-dev valgrind \
