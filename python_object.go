@@ -18,6 +18,7 @@ import (
 
 	"go.starlark.net/resolve"
 	"go.starlark.net/starlark"
+	"go.starlark.net/starlarkstruct"
 )
 
 type StarlarkState struct {
@@ -70,7 +71,9 @@ func Starlark_new(pytype *C.PyTypeObject, args *C.PyObject, kwargs *C.PyObject) 
 		return nil
 	}
 
-	state := &StarlarkState{Globals: starlark.StringDict{}, Mutex: sync.RWMutex{}, Print: nil}
+	state := &StarlarkState{Globals: starlark.StringDict{
+		"struct": starlark.NewBuiltin("struct", starlarkstruct.Make),
+	}, Mutex: sync.RWMutex{}, Print: nil}
 	self.handle = C.uintptr_t(cgo.NewHandle(state))
 
 	return self

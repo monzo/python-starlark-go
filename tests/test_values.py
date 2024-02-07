@@ -1,10 +1,11 @@
 import pytest
+from types import SimpleNamespace
 
 from starlark_go import Starlark, configure_starlark
 from starlark_go.errors import ResolveError
 
-NESTED = [{"one": (1, 1, 1), "two": [2, {"two": 2222.22}]}, ("a", "b", "c")]
-NESTED_STR = '[{"one": (1, 1, 1), "two": [2, {"two": 2222.22}]}, ("a", "b", "c")]'
+NESTED = [{"one": (1, 1, 1), "two": [2, {"two": 2222.22}]}, ("a", "b", "c"), SimpleNamespace(foo=1, bar="bar-str")]
+NESTED_STR = '[{"one": (1, 1, 1), "two": [2, {"two": 2222.22}]}, ("a", "b", "c"), struct(foo=1, bar="bar-str")]'
 
 
 def test_int():
@@ -182,3 +183,19 @@ def test_nested():
 
     x = s.eval(NESTED_STR)
     assert x == NESTED
+
+
+def test_struct():
+    s = Starlark()
+
+    x = s.eval("struct(a=1, b=2)")
+    assert isinstance(x, SimpleNamespace)
+    assert x == SimpleNamespace(a=1, b=2)
+
+    x = s.eval("struct(a=1, b=2)", convert=True)
+    assert isinstance(x, SimpleNamespace)
+    assert x == SimpleNamespace(a=1, b=2)
+
+    x = s.eval("struct(a=1, b=2)", convert=False)
+    assert isinstance(x, str)
+    assert x == "struct(a = 1, b = 2)"

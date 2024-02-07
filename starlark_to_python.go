@@ -13,6 +13,7 @@ import (
 	"unsafe"
 
 	"go.starlark.net/starlark"
+	"go.starlark.net/starlarkstruct"
 )
 
 func starlarkIntToPython(x starlark.Int) (*C.PyObject, error) {
@@ -117,6 +118,38 @@ func starlarkListToPython(x starlark.Iterable) (*C.PyObject, error) {
 	return list, nil
 }
 
+func starlarkStructToPython(x starlarkstruct.Struct) (*C.PyObject, error) {
+	dict := C.PyDict_New()
+	attrNames := x.AttrNames()
+
+	for _, attrName := range attrNames {
+		elem, err := x.Attr(attrName)
+		if err != nil {
+			C.Py_DecRef(dict)
+			return nil, fmt.Errorf("Unknown field named \"%v\" in Starlark struct: %v", attrName, err)
+		}
+
+		key := C.CString(string(attrName))
+		defer C.free(unsafe.Pointer(key))
+		ckey := C.cgoPy_BuildString(key)
+
+		value, err := innerStarlarkValueToPython(elem)
+		if value != nil {
+			defer C.Py_DecRef(value)
+		}
+		if err != nil {
+			C.Py_DecRef(dict)
+			return nil, fmt.Errorf("While converting value %v from %v in Starlark struct: %v", elem, attrName, err)
+		}
+
+		// This does not steal references
+		C.PyDict_SetItem(dict, ckey, value)
+	}
+
+	ns := C._PyNamespace_New(dict)
+	return ns, nil
+}
+
 func starlarkSetToPython(x starlark.Set) (*C.PyObject, error) {
 	set := C.PySet_New(nil)
 	iter := x.Iterate()
@@ -176,6 +209,8 @@ func innerStarlarkValueToPython(x starlark.Value) (*C.PyObject, error) {
 		value, err = starlarkTupleToPython(x)
 	case starlark.Iterable:
 		value, err = starlarkListToPython(x)
+	case *starlarkstruct.Struct:
+		value, err = starlarkStructToPython(*x)
 	default:
 		err = fmt.Errorf("Don't know how to convert Starlark %s to Python", reflect.TypeOf(x).String())
 	}
