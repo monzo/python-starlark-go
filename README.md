@@ -1,5 +1,8 @@
 # python-starlark-go
 
+> ⚠️ This repository is a public fork of https://github.com/caketop/python-starlark-go which
+should be **exclusively** used to submit patch to the original repository.
+
 [![PyPI](https://img.shields.io/pypi/v/starlark-go)](https://pypi.org/project/starlark-go/)
 ![Tests](https://github.com/caketop/python-starlark-go/actions/workflows/test.yml/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/python-starlark-go/badge/?version=latest)](https://python-starlark-go.readthedocs.io/en/latest/?badge=latest)
